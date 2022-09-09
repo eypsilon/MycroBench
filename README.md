@@ -5,7 +5,7 @@ This Package provides a method to get the time, a page or a script took to execu
 See [./tests/mykrobench](./tests/mykrobench/index.php) for examples.
 
 ```terminal
-composer require eypsilon/mykrobench
+composer require eypsilon/MycroBench
 ```
 
 ```php
