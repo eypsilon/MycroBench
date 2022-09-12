@@ -1,6 +1,6 @@
 # MycroBench | Lightweight time measure tool for PHP
 
-This Package provides a method to get the time, a page or a script took to execute in microseconds. It uses the `$_SERVER['REQUEST_TIME_FLOAT']` variable as starting time and `microtime()` as end time, and calculates the resulting difference. In order to provide correct 'start' times for subsequential requests, it also provides a method, that returns the 'ended' timestamp from the last request.
+This class uses `$_SERVER['REQUEST_TIME_FLOAT']` and current `microtime()` to calculate the difference that has passed between the two timestamps in microseconds.
 
 See [./tests/mykrobench](./tests/mykrobench/index.php) for examples.
 
@@ -18,53 +18,42 @@ use Many\MycroBench;
 
 // Array
 // (
-//     [start] => 2022-09-08 10:20:20.9107
-//     [ended] => 2022-09-08 10:20:21.1141
-//     [took] => 00.2034
-//     [mem_usage] => 364.03 KB
-//     [mem_peak] => 32.36 MB
+//     [start] => 2022-09-12 18:34:24.4330
+//     [ended] => 2022-09-12 18:34:24.4368
+//     [took] => 00.0038
+//     [mem_usage] => 358.49 KB
+//     [mem_peak] => 1.34 MB
 //     [included_files_total] => 7
 // )
 ```
 
-## Subsequential requests
+## Subsequent requests
 
-Execute subsequential requests with the correct 'start' time using the 'ended' time from the previous request.
+Get the difference of multiple calls with corrected start times for each new call.
 
 ```php
-(new MycroBench)->getBenchDiff(MycroBench::getLastDate())
+(new MycroBench)->getBenchDiff()
 
-// [start] => 2022-09-08 10:20:20.9107
-// [ended] => 2022-09-08 10:20:20.9788
-// [took] => 00.0681
-// [last] => 1662625220.9788
+// [start] => 2022-09-12 18:34:24.4330
+// [ended] => 2022-09-12 18:34:24.4356
+// [took] => 00.0026
 
-(new MycroBench)->getBenchDiff(MycroBench::getLastDate())
+(new MycroBench)->getBenchDiff()
 
-// [start] => 2022-09-08 10:20:20.9788
-// [ended] => 2022-09-08 10:20:21.0531
-// [took] => 00.0743
-// [last] => 1662625221.0531
+// [start] => 2022-09-12 18:34:24.4356
+// [ended] => 2022-09-12 18:34:24.4362
+// [took] => 00.0006
 
-(new MycroBench)->getBenchDiff(MycroBench::getLastDate())
+(new MycroBench)->getBenchDiff()
 
-// [start] => 2022-09-08 10:20:21.0531
-// [ended] => 2022-09-08 10:20:21.1140
-// [took] => 00.0609
-// [last] => 1662625221.1140
+// [start] => 2022-09-12 18:34:24.4362
+// [ended] => 2022-09-12 18:34:24.4367
+// [took] => 00.0005
 ```
 
 ### Methods
 
 ```php
-/**
- * Get timestamp with microseconds from the last request or null on first request.
- * Only available and updated, when (new MycroBench)->getBenchDiff() gets called
- *
- * @return string|null '1662623500.7135'
- */
-MycroBench::getLastDate()
-
 /**
  * Datetime with microseconds
  *
@@ -78,6 +67,14 @@ MycroBench::getLastDate()
  * @return string '1662045288.5000'
  */
 (new MycroBench)->getDateToMicro('2022-09-01 17:14:48.5000') # 'Y-m-d H:i:s.u', 'U.u'
+
+/**
+ * Get timestamp with microseconds from the last request or null on first request.
+ * Only available and updated, when (new MycroBench)->getBenchDiff() gets called
+ *
+ * @return string|null '1662623500.7135'
+ */
+MycroBench::getLastDate()
 
 /**
  * Readable Bytes

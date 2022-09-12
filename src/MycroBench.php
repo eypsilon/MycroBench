@@ -172,8 +172,7 @@ class MycroBench
     }
 
     /**
-     * Get dateDiff with last microtime to get the next
-     * bench with start time from the previous
+     * Get the time difference of multiple calls with corrected start time for each new call
      *
      * @param string|null $time
      * @param array $r
@@ -181,8 +180,8 @@ class MycroBench
      */
     function getBenchDiff(string $time=null, array $r=[]): array
     {
-        $r = $this->getDateDiffToNow($time);
-        $r['last'] = self::$lastDate = $this->getDateToMicro($r['ended']);
+        $r = $this->getDateDiffToNow($time ?? self::$lastDate);
+        self::$lastDate = $this->getDateToMicro($r['ended']);
         return $r;
     }
 

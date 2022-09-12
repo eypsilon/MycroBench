@@ -22,7 +22,7 @@ require_once dirname(dirname(__DIR__)) . '/vendor/autoload.php';
 function do_some_exhausting_stuff(int $xTimes)
 {
     do {
-        range(0, $do[] = rand(1e4, 9e5));
+        range(0, $do[] = rand(1e3, 2e4));
     } while (--$xTimes);
 
     $do = array_map(function($each) {
@@ -47,7 +47,7 @@ if ($doBenchys) {
         $runBenchys['done_some_exhausting_stuff'][$i] = do_some_exhausting_stuff(rand(5, 10));
 
         try {
-            $runBenchys['benchmarks'][$i] = (new MycroBench)->getBenchDiff(MycroBench::getLastDate());
+            $runBenchys['benchmarks'][$i] = (new \Many\MycroBench)->getBenchDiff();
         } catch(Exception $e) {
             $runBenchys['exception'][$i] = $e->getMessage();
         }
