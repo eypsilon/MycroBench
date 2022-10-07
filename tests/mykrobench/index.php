@@ -15,6 +15,10 @@ use Many\MycroBench;
 
 require_once dirname(dirname(__DIR__)) . '/vendor/autoload.php';
 
+function print_pre($v) {
+    printf('<pre>%s</pre>', htmlentities(print_r($v, true)));
+}
+
 /**
  * @param int $xTimes
  * @return string Exhausting function
@@ -22,7 +26,7 @@ require_once dirname(dirname(__DIR__)) . '/vendor/autoload.php';
 function do_some_exhausting_stuff(int $xTimes)
 {
     do {
-        range(0, $do[] = rand(1e3, 2e4));
+        range(0, $do[] = rand(1e3, 5e4));
     } while (--$xTimes);
 
     $do = array_map(function($each) {
@@ -36,7 +40,7 @@ function do_some_exhausting_stuff(int $xTimes)
 /**
  * @var int Run Benchmarks x times
  */
-$doBenchys = 3;
+$doBenchys = 5;
 
 /**
  * @var mixed Run Benchmarks
@@ -47,7 +51,7 @@ if ($doBenchys) {
         $runBenchys['done_some_exhausting_stuff'][$i] = do_some_exhausting_stuff(rand(5, 10));
 
         try {
-            $runBenchys['benchmarks'][$i] = (new \Many\MycroBench)->getBenchDiff();
+            $runBenchys['benchmarks'][$i] = (new MycroBench)->getBenchDiff();
         } catch(Exception $e) {
             $runBenchys['exception'][$i] = $e->getMessage();
         }

@@ -11,6 +11,7 @@ use function array_merge;
 use function call_user_func;
 use function count;
 use function date_default_timezone_get;
+use function floatval;
 use function floor;
 use function func_get_args;
 use function get_included_files;
@@ -22,6 +23,7 @@ use function memory_get_peak_usage;
 use function memory_get_usage;
 use function microtime;
 use function natsort;
+use function number_format;
 use function pow;
 use function print_r;
 use function round;
@@ -109,7 +111,12 @@ class MycroBench
         if ($to)
             $this->useToFormat = $to;
 
-        return $this->getFormattedDate((string) ($date ?? microtime(true)), null, null, $substr);
+        // microtime(true) returns a simple timestamp, if .0000, force to float format
+        if (!$date) {
+            $date = number_format(floatval(microtime(true)), 4, '.', '');
+        }
+
+        return $this->getFormattedDate((string) ($date), null, null, $substr);
     }
 
     /**
@@ -148,6 +155,7 @@ class MycroBench
                     ->format($tf ? $tf : $this->useToFormat), 0, $substr);
             }
         } catch(Exception $e) {}
+
         throw new Exception(sprintf('Failed to create date object from: %s', print_r($d, true)));
     }
 
