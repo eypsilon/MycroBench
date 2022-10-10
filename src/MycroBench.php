@@ -5,18 +5,18 @@ namespace Many;
 use DateTime;
 use DateTimeZone;
 use Exception;
+use InvalidArgumentException;
 use function array_filter;
 use function array_map;
 use function array_merge;
-use function call_user_func;
+use function array_values;
 use function count;
 use function date_default_timezone_get;
 use function floatval;
 use function floor;
 use function func_get_args;
 use function get_included_files;
-use function is_callable;
-use function is_iterable;
+use function hrtime;
 use function is_string;
 use function log;
 use function memory_get_peak_usage;
@@ -29,17 +29,15 @@ use function print_r;
 use function round;
 use function sprintf;
 use function str_replace;
-use function substr;
 
 /**
- * Measure run time in microseconds
+ * Measure run time in microseconds and high resolution times
  *
  * @author Engin Ypsilon <engin.ypsilon@gmail.com>
  * @license http://www.opensource.org/licenses/mit-license.html  MIT License
  */
 class MycroBench
 {
-
     /**
      * @var string default date format (2022-09-08 10:25:32.7448) */
     const BENCH_DATE_FORMAT = 'Y-m-d H:i:s.u';
@@ -65,19 +63,115 @@ class MycroBench
     private string $useDiffFormat = self::BENCH_MICRO_DIFF_FORMAT;
 
     /**
-     * @var string|null Sets the 'ended' time of the last request for subsequential requests */
-    private static ?string $lastDate = null;
-
+     * @var float|null Keeps the 'ended' time of the last request for subsequent requests */
+    private static $lastDate = null;
 
     /**
-     * Get all
+     * @var array temp hrtime storage */
+    private static array $hrTime = [];
+
+    /**
+     * Initialise MycroBench, sets start time for microbench and high resolution bench to now
      *
-     * @param bool $returnFiles get included files in an array
-     * @param string $rmFromPath remove from each file path of included files, eg: realpath('../../../..')
-     * @param array define a list of callables to get additionally data, eg: ['get_declared_classes']
+     * @return void
+     */
+    public static function initBench(): void
+    {
+        self::$lastDate = static::microNumFormat(microtime(true));
+        static::hrStart();
+        return;
+    }
+
+    /**
+     * Get hrtime()
+     *
+     * @return bool|float|int
+     */
+    public static function getHrTime()
+    {
+        return hrtime(true);
+    }
+
+    /**
+     * Start high resolution bench
+     *
+     * @return void
+     */
+    public static function hrStart(): void
+    {
+        self::$hrTime = ['start' => static::getHrTime()];
+        return;
+    }
+
+    /**
+     * End high resolution bench
+     *
+     * @param bool get result in return
+     * @return string|null
+     * @throws InvalidArgumentException
+     */
+    public static function hrEnd(bool $r=false): ?string
+    {
+        if (empty(self::$hrTime['start'])) {
+            throw new InvalidArgumentException('Missing start time');
+        }
+
+        self::$hrTime['ended'] = static::getHrTime();
+
+        return $r ? static::hrGet() : null;
+    }
+
+    /**
+     * Get high resolution time
+     *
+     * @return string
+     * @throws InvalidArgumentException
+     */
+    public static function hrGet(): string
+    {
+        if (empty(self::$hrTime['ended']) OR empty(self::$hrTime['start'])) {
+            throw new InvalidArgumentException('Missing start/ended time for high resolution bench');
+        }
+
+        $diff = self::$hrTime['ended'] - self::$hrTime['start'];
+        static::hrStart();
+
+        return number_format($diff/1e+9, 9);
+    }
+
+    /**
+     * Get high resolution time with internally staid start times
+     *
+     * @return string
+     */
+    public static function hrBench(): string
+    {
+        if (empty(self::$hrTime['start']))
+            static::hrStart();
+
+        return static::hrEnd(true);
+    }
+
+    /**
+     * Alias for getAll()
+     *
+     * @param bool return included files
+     * @param string shortens the path of included files by removing matching part
      * @return array
      */
-    function get(): array
+    public static function get(): array
+    {
+        return (new self)->getAll(...func_get_args());
+    }
+
+    /**
+     * Default get
+     *
+     * @param bool enable (array) get_included_files()
+     * @param string set a needle to shorten the paths returned in get_included_files(), eg: realpath('../../../..')
+     * @return array
+     */
+    public function getAll(): array
     {
         $args = func_get_args();
 
@@ -87,173 +181,118 @@ class MycroBench
             static::getIncludedFiles($args[0] ?? false, $args[1] ?? null)
         );
 
-        if (($args[2] ?? null) AND is_iterable($args[2]))
-            foreach($args[2] as $add)
-                if (is_callable($add))
-                    $r['added'][$add] = call_user_func($add);
-
         return array_filter($r);
+    }
+
+    /**
+     * Alias for getBenchDiff()
+     *
+     * @param bool high resolution times
+     * @return array
+     */
+    public static function getBench(): array
+    {
+        return (new self)->getBenchDiff(...func_get_args());
+    }
+
+    /**
+     * Get bench times for consecutive requests with internally staid start times
+     *
+     * @param bool get additionally high resolution times
+     * @return array
+     */
+    public function getBenchDiff(bool $hrb=false): array
+    {
+        $r = $this->getDateDiffToNow(self::$lastDate);
+
+        if ($hrb)
+            $r['h_res'] = static::hrBench();
+
+        self::$lastDate = $this->getDateToMicro($r['ended']);
+
+        return $r;
     }
 
     /**
      * Get datetime with microseconds
      *
-     * @param string|null $d date, default microtime(true)
-     * @param string $from format, eg: 'U.u'           # microtime
-     * @param string $to format, eg:   'Y-m-d H:i:s.u' # date
-     * @param int $substr
+     * @param string|null date, default: microtime(true)
+     * @param string|null from format, eg: 'U.u'           # microtime
+     * @param string|null to format, eg:   'Y-m-d H:i:s.u' # date
      * @return string|null
      */
-    function getDate(string $date=null, string $from=null, string $to=null, int $substr=-2): ?string
+    public function getDate(string $date=null, string $from=null, string $to=null): ?string
     {
         if ($from)
             $this->useFromFormat = $from;
+
         if ($to)
             $this->useToFormat = $to;
 
-        // microtime(true) returns a simple timestamp, if .0000, force to float format
-        if (!$date) {
-            $date = number_format(floatval(microtime(true)), 4, '.', '');
-        }
+        // if microtime hits ".000000", it returns int timestamp instead of float
+        if (!$date)
+            $date = static::microNumFormat(microtime(true));
 
-        return $this->getFormattedDate((string) ($date), null, null, $substr);
+        return $this->getFormattedDate((string) $date);
     }
 
     /**
      * Formats datetime with microseconds to microtime()
      *
-     * @param string $date (2022-09-08 10:25:32.7448)
-     * @param string|null $from format 'U.u'
-     * @param string|null $to format 'Y-m-d H:i:s.u'
-     * @param integer $substr
+     * @param string date '2022-09-08 10:25:32.7448'
+     * @param string|null from format, default 'U.u'
+     * @param string|null to format,   default 'Y-m-d H:i:s.u'
      * @return string|null
      */
-    function getDateToMicro(string $date, string $from=null, string $to=null, int $substr=-2): ?string
+    public function getDateToMicro(string $date, string $from=null, string $to=null): ?string
     {
         $this->useFromFormat = $from ? $from : self::BENCH_DATE_FORMAT;
         $this->useToFormat = $to ? $to : self::BENCH_MICRO_DATE_FORMAT;
 
-        return $this->getFormattedDate($date, null, null, $substr);
-    }
-
-    /**
-     * Get formatted date. Default formats from microtime to datetime
-     *
-     * @param string $d date | microtime
-     * @param string|null $ff from Format
-     * @param string|null $tf to Format
-     * @param integer $substr
-     * @return ?string|null
-     * @throws Exception
-     */
-    function getFormattedDate(string $d, string $ff=null, string $tf=null, int $substr=-2)
-    {
-        try {
-            if ($createFrom = DateTime::createFromFormat($ff ? $ff : $this->useFromFormat, (string) $d)) {
-                return substr($createFrom
-                    ->setTimezone(new DateTimeZone(date_default_timezone_get()))
-                    ->format($tf ? $tf : $this->useToFormat), 0, $substr);
-            }
-        } catch(Exception $e) {}
-
-        throw new Exception(sprintf('Failed to create date object from: %s', print_r($d, true)));
+        return $this->getFormattedDate($date);
     }
 
     /**
      * Returns the difference between two Dates with microseconds
      *
-     * @param string|float $date1 date start
-     * @param string|float $date2 date end
-     * @param string $f format
-     * @param int $s substr
+     * @param string|float date start
+     * @param string|float date end
+     * @param string return format
      * @return string
+     * @throws Exception
      */
-    function getDateDiff($d1, $d2, string $f=null, int $s=-2): string
+    public function getDateDiff($d1, $d2, string $f=null): string
     {
         try {
-            return substr((new DateTime($d1))
+            return (new DateTime($d1))
                 ->diff(new DateTime($d2))
-                ->format(is_string($f) ? $f : $this->useDiffFormat), 0, $s);
+                ->format(is_string($f) ? $f : $this->useDiffFormat);
         } catch(Exception $e) {
             throw new Exception($e->getMessage());
         }
     }
 
     /**
-     * Get the time difference of multiple calls with corrected start time for each new call
-     *
-     * @param string|null $time
-     * @param array $r
-     * @return array
-     */
-    function getBenchDiff(string $time=null, array $r=[]): array
-    {
-        $r = $this->getDateDiffToNow($time ?? self::$lastDate);
-        self::$lastDate = $this->getDateToMicro($r['ended']);
-        return $r;
-    }
-
-    /**
-     * Get timestamp from last request
-     *
-     * @return string|null
-     */
-    static function getLastDate(): ?string
-    {
-        return self::$lastDate;
-    }
-
-    /**
-     * Extended dateDiff, default uses $_SERVER['REQUEST_TIME_FLOAT'] as start time & microseconds(true) for ended
-     *
-     * @param string|float $startTime
-     * @param string|null $fromFormat
-     * @param string|null $toFormat
-     * @param string|null $diffFormat
-     * @return array
-     */
-    function getDateDiffToNow(
-        $startTime = null,
-        string $fromFormat = null,
-        string $toFormat = null,
-        string $diffFormat = null
-    ): array {
-        $startTime = $startTime ? $startTime : $_SERVER['REQUEST_TIME_FLOAT'];
-
-        if ($fromFormat)
-            $this->useFromFormat = $fromFormat;
-        if ($toFormat)
-            $this->useToFormat = $toFormat;
-        if ($diffFormat)
-            $this->useDiffFormat = $diffFormat;
-
-        return [
-            'start' => $start = $this->getDate((string) $startTime),
-            'ended' => $current = $this->getDate(),
-            'took' => $this->getDateDiff($start, $current),
-        ];
-    }
-
-    /**
      * Readable Bytes
      *
-     * @param int $b bytes
-     * @param int $n number format decimal, numbers after comma
-     * @param array $u unit file sizes
+     * @param int bytes
+     * @param int number format decimal, numbers after comma
+     * @param int unit file size index
+     * @param array unit file sizes
      * @return string|int
      */
-    static function readableBytes(int $b, int $n=2, array $u=['B', 'KB', 'MB', 'GB', 'TB', 'PB'])
+    public static function readableBytes(int $b, int $n=2, int $i=0, array $u=['B', 'KB', 'MB', 'GB', 'TB', 'PB'])
     {
         return $b > 0 ? round($b/pow(1024, ($i=floor(log($b, 1024)))), $n) . ' ' . $u[$i] : 0;
     }
 
     /**
-     * Get memory_usage with peak_usage in a readable format
+     * Get memory_usage with peak_usage
      *
      * @param bool return readable or plain
      * @return array
      */
-    static function getMemUsage(bool $readable=false): array
+    public static function getMemUsage(bool $readable=false): array
     {
         $mem = memory_get_usage();
         $peak = memory_get_peak_usage();
@@ -267,11 +306,11 @@ class MycroBench
     /**
      * Get included files
      *
-     * @param bool $returnFiles
-     * @param string $rmFromPath removes given string from each file path, eg: realpath('../../..')
+     * @param bool return Files in an array
+     * @param string removes given string from each file path, eg: realpath('../../..')
      * @return array
      */
-    static function getIncludedFiles(?bool $returnFiles=false, ?string $rmFromPath=null): array
+    public static function getIncludedFiles(bool $returnFiles=false, string $rmFromPath=null): array
     {
         $gi = get_included_files();
         if ($returnFiles) {
@@ -285,7 +324,74 @@ class MycroBench
 
         return [
             'included_files_total' => count($gi),
-            'included_files_list' => $returnFiles ? $gi : null,
+            'included_files_list' => $returnFiles ? array_values($gi) : null,
+        ];
+    }
+
+    /**
+     * Format microtime to float
+     *
+     * @param float|int|string microtime
+     * @return string
+     */
+    protected static function microNumFormat($mtime): string
+    {
+        return number_format(floatval($mtime), 6, '.', '');
+    }
+
+    /**
+     * Get formatted date. Default formats from microtime to datetime
+     *
+     * @param string date | microtime
+     * @param string|null from Format
+     * @param string|null to Format
+     * @return string|null
+     * @throws Exception
+     */
+    protected function getFormattedDate(string $d, string $ff=null, string $tf=null)
+    {
+        try {
+            $ff = $ff ? $ff : $this->useFromFormat;
+            if ($createFrom = DateTime::createFromFormat($ff, (string) $d)) {
+                return $createFrom
+                    ->setTimezone(new DateTimeZone(date_default_timezone_get()))
+                    ->format($tf ? $tf : $this->useToFormat);
+            }
+        } catch(Exception $e) {}
+
+        throw new Exception(sprintf('Failed to create date object from: %s', print_r($d, true)));
+    }
+
+    /**
+     * Extended dateDiff
+     *
+     * @param string|float start Time
+     * @param string|null from Format
+     * @param string|null to Format
+     * @param string|null diff Format
+     * @return array
+     */
+    protected function getDateDiffToNow(
+        $startTime = null,
+        string $fromFormat = null,
+        string $toFormat = null,
+        string $diffFormat = null
+    ): array {
+
+        if ($fromFormat)
+            $this->useFromFormat = $fromFormat;
+        if ($toFormat)
+            $this->useToFormat = $toFormat;
+        if ($diffFormat)
+            $this->useDiffFormat = $diffFormat;
+
+        if (!$startTime)
+            $startTime = static::microNumFormat($_SERVER['REQUEST_TIME_FLOAT']);
+
+        return [
+            'start' => $start   = $this->getDate((string) $startTime),
+            'ended' => $current = $this->getDate(),
+            'took'  => $this->getDateDiff($start, $current),
         ];
     }
 
