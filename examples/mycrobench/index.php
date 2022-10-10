@@ -22,7 +22,7 @@ require_once dirname(dirname(__DIR__)) . '/vendor/autoload.php';
 function do_rand_stuff(int $xTimes)
 {
     do {
-        range(0, $do[] = rand(1e1, 1e4));
+        range(0, $do[] = rand(1e1, 5e5));
     } while (--$xTimes);
 
     return sprintf('ranged: %s', implode(', ',
@@ -36,7 +36,7 @@ function do_rand_stuff(int $xTimes)
 /**
  * @var int Run Benchmarks x times
  */
-$doBenchys = 20;
+$doBenchys = 5;
 
 /**
  * Run Benchmarks
@@ -50,8 +50,7 @@ if ($doBenchys)
 
     foreach(range(1, $doBenchys) as $i)
     {
-        // $runBenchys['task_list'][$i] =
-        do_rand_stuff(rand(5, 5));
+        $runBenchys['task_list'][$i] = do_rand_stuff(rand(5, 10));
 
         try {
 
