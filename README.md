@@ -2,7 +2,7 @@
 
 This Package uses `$_SERVER['REQUEST_TIME_FLOAT']` and `microtime()` to calculate the difference that has passed between both times, when instantiated. It also provides a basic implementation of `hrtime()`, which allows measuring processing times with higher precision.
 
-See [./examples/mycrobench](./examples/mycrobench/index.php) for examples.
+See [./public/index.php](./public/index.php) for examples or check the livedemo on [Vercel](https://mycro-bench.vercel.app/).
 
 ```terminal
 composer require eypsilon/MycroBench
@@ -70,6 +70,7 @@ MycroBench::getBench(true)
 Get `microtimes` with the system's high resolution time using [hrtime()](https://www.php.net/manual/de/function.hrtime.php).
 
 Microsec: `00.019045`
+
 High Reso: `0.019044332`
 
 ```php

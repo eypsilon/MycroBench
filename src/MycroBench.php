@@ -279,7 +279,7 @@ class MycroBench
      * @param int number format decimal, numbers after comma
      * @param int unit file size index
      * @param array unit file sizes
-     * @return string|int
+     * @return string|int ["4 MB" | 0]
      */
     public static function readableBytes(int $b, int $n=2, int $i=0, array $u=['B', 'KB', 'MB', 'GB', 'TB', 'PB'])
     {

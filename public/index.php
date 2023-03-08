@@ -3,17 +3,10 @@
 use Many\MycroBench;
 
 /**
- * To use this example, copy the './examples/mycrobench'
- * directory to where composers  './vendor' directory is
- *
  * For demo purposes only
- *
- * $ ~/terminal/in/./examples/mycrobench
- * php -S localhost:8000
- * http://localhost:8000
  */
 
-require_once dirname(dirname(__DIR__)) . '/vendor/autoload.php';
+require_once dirname(__DIR__) . '/vendor/autoload.php';
 
 /**
  * @param int $xTimes
@@ -22,7 +15,7 @@ require_once dirname(dirname(__DIR__)) . '/vendor/autoload.php';
 function do_rand_stuff(int $xTimes)
 {
     do {
-        range(0, $do[] = rand(1e1, 5e5));
+        range(0, $do[] = rand(1e3, 5e5));
     } while (--$xTimes);
 
     return sprintf('ranged: %s', implode(', ',
@@ -32,11 +25,10 @@ function do_rand_stuff(int $xTimes)
     ));
 }
 
-
 /**
  * @var int Run Benchmarks x times
  */
-$doBenchys = 5;
+$doBenchys = 25;
 
 /**
  * Run Benchmarks
@@ -50,28 +42,34 @@ if ($doBenchys)
 
     foreach(range(1, $doBenchys) as $i)
     {
-        $runBenchys['task_list'][$i] = do_rand_stuff(rand(5, 10));
+        $i = str_pad($i, strlen((string) $doBenchys), '0', STR_PAD_LEFT);
+
+        $runBenchys['task_list'][$i] = do_rand_stuff(rand(4, 9));
 
         try {
-
             // get micro bench with internally staid start times
             // set first param to true to get high resolution times
             $runBenchys['benchmarks'][$i] = MycroBench::getBench(true);
 
+            // Get high resolution time only. The benches below will seem
+            // "faster", that's because their start time is just 5 lines ago.
+            // Since nothing happened in between, it takes practically no time.
+            $runBenchys['hr_bench'][$i] = MycroBench::hrBench();
         } catch(Exception $e) {
             $runBenchys['exception'][$i] = $e->getMessage();
         }
     }
 }
 
-
 /**
- * Template Engin © 1992 eypsilon
+ * @Template\Engin © 1992 eypsilon
  */
 ?><!DOCTYPE html>
-<html><head><meta charset="utf-8" />
+<html>
+<head>
+<meta charset="utf-8">
 <title><?= $cName = MycroBench::class ?> | local-dev-many-title</title>
-<meta name="description" content="<?= $cName ?> Example Page" />
+<meta name="description" content="<?= $cName ?> Example Page">
 <style>header, footer {text-align: center}</style>
 </head>
 <body>
@@ -84,14 +82,15 @@ if ($doBenchys)
         print_r($runBenchys ?? null);
 
         try {
-            print_r(MycroBench::get(false, realpath('../../..')));
+            print_r(MycroBench::get(false, realpath('./../..')));
         } catch(Exception $e) {
-            print '<h2>' . $e->getMessage() . '</h2>';
+            print '<hr /><h2>' . $e->getMessage() . '</h2>';
         }
     ?></pre>
 </main>
 <hr />
 <footer>
-    <p>© <?= $cName ?></p>
+    <p>© <?= date('Y') ?> <?= $cName ?></p>
 </footer>
-</body></html>
+</body>
+</html>
