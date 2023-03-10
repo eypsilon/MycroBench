@@ -98,13 +98,14 @@ hr {margin: 1em 0;}
         <button type="button">x-times</button>
         <select name="x-times" onchange="this.form.submit()">
             <?php
-                $options = [$doBenchys, ...range(10, 40, 10), ...range(100, 250, 50)];
-                $options = array_unique($options);
+                $options = array_unique([
+                    $doBenchys, ...range(10, 40, 10), ...range(100, 250, 50)
+                ]);
                 asort($options);
 
                 foreach($options as $i)
                 {
-                    printf('<option value="%1$s"%2$s>%1$s</option>'
+                    printf('<option value="%1$s"%2$s>%1$s</option>' . PHP_EOL
                         , $i
                         , $i == $doBenchys ? ' selected="selected"' : null
                     );
