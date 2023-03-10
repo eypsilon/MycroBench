@@ -4,6 +4,9 @@ use Many\MycroBench;
 
 /**
  * For demo purposes only
+ *
+ * php -S localhost:8000
+ * http://localhost:8000
  */
 
 require_once dirname(__DIR__) . '/vendor/autoload.php';
@@ -26,9 +29,16 @@ function do_rand_stuff(int $xTimes)
 }
 
 /**
- * @var int Run Benchmarks x times
+ * @var ?int Run Benchmarks variable times
  */
-$doBenchys = 25;
+$doXtimes = $_GET['x-times'] ?? null;
+
+if ($doXtimes AND is_numeric($doXtimes) AND $doXtimes >= 1 AND $doXtimes <= 250)
+{
+    $doBenchys = $doXtimes;
+} else {
+    $doBenchys = 10;
+}
 
 /**
  * Run Benchmarks
@@ -50,16 +60,13 @@ if ($doBenchys)
             // get micro bench with internally staid start times
             // set first param to true to get high resolution times
             $runBenchys['benchmarks'][$i] = MycroBench::getBench(true);
-
-            // Get high resolution time only. The benches below will seem
-            // "faster", that's because their start time is just 5 lines ago.
-            // Since nothing happened in between, it takes practically no time.
-            $runBenchys['hr_bench'][$i] = MycroBench::hrBench();
+            $runBenchys['benchmarks'][$i]['task'] = $runBenchys['task_list'][$i];
         } catch(Exception $e) {
             $runBenchys['exception'][$i] = $e->getMessage();
         }
     }
 }
+
 
 /**
  * @Template\Engin © 1992 eypsilon
@@ -70,13 +77,43 @@ if ($doBenchys)
 <meta charset="utf-8">
 <title><?= $cName = MycroBench::class ?> | local-dev-many-title</title>
 <meta name="description" content="<?= $cName ?> Example Page">
-<style>header, footer {text-align: center}</style>
+<style>
+header, footer {text-align: center;}
+header h1 {margin: 0;}
+header p {margin: 5px 0;}
+fieldset {margin: 10px 0; padding: 5px; display: flex; background: #f5f5f5; border-color: #fff;}
+input, select {width: 100%; border-width: 1px 0;  background: #fff;}
+[type=button] {pointer-events: none; color: #999;}
+select, button {display: block; padding: 6px 5px; white-space: nowrap;}
+pre {margin: 1em 0; white-space: pre-wrap;}
+hr {margin: 1em 0;}
+</style>
 </head>
 <body>
 <header>
-    <h1><?= $cName ?></h1>
+    <h1><a href="/"><?= $cName ?></a></h1>
 </header>
-<hr />
+<form action="" method="get">
+    <fieldset>
+        <button type="button">x-times</button>
+        <select name="x-times" onchange="this.form.submit()">
+            <?php
+                $options = [$doBenchys, ...range(10, 40, 10), ...range(100, 250, 50)];
+                $options = array_unique($options);
+                asort($options);
+
+                foreach($options as $i)
+                {
+                    printf('<option value="%1$s"%2$s>%1$s</option>'
+                        , $i
+                        , $i == $doBenchys ? ' selected="selected"' : null
+                    );
+                }
+            ?>
+        </select>
+        <button type="submit">Set</button>
+    </fieldset>
+</form>
 <main>
     <pre><?php
         print_r($runBenchys ?? null);
